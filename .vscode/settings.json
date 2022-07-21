@@ -1,0 +1,4 @@
+{
+    "jupyter.jupyterServerType": "local",
+    "autoDocstring.docstringFormat": "numpy"
+}
