@@ -23,7 +23,8 @@ def assignment(X, centers):
     return labels
 
 def update(X, labels, k):
-    new_centers = np.zeros(k)
+    n, p = X.shape
+    new_centers = np.zeros((k, p))
     for i in range(k):
-        new_centers[i] = X[labels == i].mean()
+        new_centers[i] = X[labels == i].mean(axis=0)
     return new_centers
