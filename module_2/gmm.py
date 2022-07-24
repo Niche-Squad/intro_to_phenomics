@@ -36,7 +36,6 @@ def gmm(X, k, niter=100):
     ll = []
     # EM iterations
     for i in range(niter):
-        print("----- %d -----" % i)
         # E-step
         R = estimate_R(R, X, w, mu, sigma)
         # M-step
@@ -44,7 +43,7 @@ def gmm(X, k, niter=100):
         mu    = update_mu(R, X)
         sigma = update_sigma(R, X, mu)
         # likelihood
-        lod = get_LOD(X, w, mu, sigma)
+        lod = get_ll(X, w, mu, sigma)
         ll += [lod]
     # return
     return dict(labels=R.argmax(axis=1),
@@ -77,9 +76,9 @@ def pdf_mvn(x, mu, sigma):
     # numerator
     e1 = np.matmul((x - mu).T, np.linalg.inv(sigma))
     e2 = np.matmul(e1, (x - mu))
-    num = math.exp(-0.5 * e2)
+    num = np.exp(-0.5 * e2)
     # denominator
-    den = (np.linalg.det(sigma) * (2 * math.pi) ** len(x)) ** (1 / 2)
+    den = (np.linalg.det(sigma) * (2 * np.pi) ** len(x)) ** (1 / 2)
     # probability
     p = num / den
     return p
@@ -157,16 +156,17 @@ def update_sigma(R, X, mu):
         new_sigma[j] = np.sum(weighted_MSD, axis=0) / np.sum(R[:, j])
     return new_sigma
 
-def get_LOD(X, w, mu, sigma):
+def get_ll(X, w, mu, sigma):
     n = len(X)
     k = len(w)
-    mat_LOD = np.zeros((n, k))
+    mat_ll = np.zeros((n, k))
     for i in range(n):
         for j in range(k):
-            mat_LOD[i, j] = w[j] * pdf_mvn(X[i], mu[j], sigma[j])
-    LOD = np.log(np.sum(mat_LOD, axis=1)).sum()
-    return LOD
+            mat_ll[i, j] = w[j] * pdf_mvn(X[i], mu[j], sigma[j])
+    ll = np.log(np.sum(mat_ll, axis=1)).sum()
+    return ll
 
 # references:
+# https://www.cs.cmu.edu/~epxing/Class/10715/lectures/EM.pdf
 # https://www.youtube.com/watch?v=qMTuMa86NzU
 # https://en.wikipedia.org/wiki/Multivariate_normal_distribution
