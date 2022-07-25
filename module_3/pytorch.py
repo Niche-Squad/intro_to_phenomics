@@ -1,4 +1,5 @@
 import torch
+print(torch.has_mps)
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
@@ -65,65 +66,85 @@ class Net(nn.Module):
         x = self.fc3(x)
         return x
 
+# GPU
+
 net = Net()
 device = torch.device("mps")
 net.to(device)
-
 summary(net, (30, 3, 32, 32))
 
 # define loss
 loss_function = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
+# callback
+import os
+from poutyne import set_seeds, Model, ModelCheckpoint, CSVLogger, Callback, ModelBundle, SKLearnMetrics, plot_history
+save_path = "save_model/model"
+os.makedirs(save_path, exist_ok=True)
+callbacks = [
+    # Save the latest weights to be able to continue the optimization at the end for more epochs.
+    ModelCheckpoint(os.path.join(save_path, 'last_epoch.ckpt')),
+
+    # Save the weights in a new file when the current model is better than all previous models.
+    ModelCheckpoint(os.path.join(save_path, 'best_epoch_{epoch}.ckpt'), monitor='val_loss', mode='min',
+                    save_best_only=True, restore_best=True, verbose=True),
+
+    # Save the losses and accuracies for each epoch in a TSV.
+    CSVLogger(os.path.join(save_path, 'log.tsv'), separator='\t'),
+]
+
 # training
 # https://github.com/GRAAL-Research/poutyne
-model = Model(net, optimizer, loss_function, batch_metrics=['cross_entropy'])
-model.fit_generator(trainloader, testloader, epochs=2)
+model = Model(net, optimizer, loss_function,
+              device=device,
+              batch_metrics=['cross_entropy'])
+model.fit_generator(trainloader, testloader, epochs=20, callbacks=callbacks)
 # test_loss, test_acc = model.evaluate_generator(testloader)
-model = Experiment(".", net, optimizer=optimizer, loss_function=loss_function, batch_metrics=['cross_entropy'])
-model.train(trainloader, testloader, epochs=1)
+# model = Experiment(".", net, optimizer=optimizer, loss_function=loss_function, batch_metrics=['cross_entropy'])
+# model.train(trainloader, testloader, epochs=1)
 
-# visualization of test
-logs = pd.read_csv("log_10e.tsv", sep="\t")
-plt.plot(logs["loss"], label="train")
-plt.plot(logs["val_loss"], label="test")
-plt.legend()
+# # visualization of test
+# logs = pd.read_csv("log_10e.tsv", sep="\t")
+# plt.plot(logs["loss"], label="train")
+# plt.plot(logs["val_loss"], label="test")
+# plt.legend()
 
-# predict
-img, truth = get_item(trainset, 3, transform=False)
+# # predict
+# img, truth = get_item(trainset, 3, transform=False)
 
-ls_train = list(iter(trainloader))
-ip, lb = ls_train[0]
-ip.shape
-lb.shape
-net(ip)
+# ls_train = list(iter(trainloader))
+# ip, lb = ls_train[0]
+# ip.shape
+# lb.shape
+# net(ip)
 
-img.shape
+# img.shape
 
-# training
-for epoch in range(2):  # loop over the dataset multiple times
-    running_loss = 0.0
-    for i, data in enumerate(trainloader, 0):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
+# # training
+# for epoch in range(2):  # loop over the dataset multiple times
+#     running_loss = 0.0
+#     for i, data in enumerate(trainloader, 0):
+#         # get the inputs; data is a list of [inputs, labels]
+#         inputs, labels = data
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
+#         # zero the parameter gradients
+#         optimizer.zero_grad()
 
-        # forward + backward + optimize
-        outputs = net(inputs)
-        loss = loss_function(outputs, labels)
-        loss.backward()
-        optimizer.step()
+#         # forward + backward + optimize
+#         outputs = net(inputs)
+#         loss = loss_function(outputs, labels)
+#         loss.backward()
+#         optimizer.step()
 
-        # print statistics
-        running_loss += loss.item()
-        if i % 2000 == 1999:    # print every 2000 mini-batches
-            print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
-            running_loss = 0.0
-print('Finished Training')
-
-
+#         # print statistics
+#         running_loss += loss.item()
+#         if i % 2000 == 1999:    # print every 2000 mini-batches
+#             print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 2000:.3f}')
+#             running_loss = 0.0
+# print('Finished Training')
 
 
-# https://colab.research.google.com/github/pranjalchaubey/Deep-Learning-Notes/blob/master/PyTorch%20Image%20Classification%20in%202020/Image_Classification_practice.ipynb#scrollTo=ut1uDoXJzCTu
+
+# # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
+# # https://colab.research.google.com/github/pranjalchaubey/Deep-Learning-Notes/blob/master/PyTorch%20Image%20Classification%20in%202020/Image_Classification_practice.ipynb#scrollTo=ut1uDoXJzCTu
