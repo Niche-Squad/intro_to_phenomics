@@ -1,7 +1,12 @@
 import numpy as np
-import math
 
-def gmm(X, k, niter=100):
+def gmm_sklearn(X, k):
+    from sklearn.mixture import GaussianMixture
+    out = GaussianMixture(k).fit(X)
+    return dict(labels=out.predict(X),
+                centers=out.means_)
+
+def gmm(X, k, niter=20):
     """_summary_
 
     Parameters

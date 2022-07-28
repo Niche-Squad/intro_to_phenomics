@@ -1,10 +1,15 @@
 import numpy as np
 
-def kmeans(X, k, niter=20):
+def KMeans_sklearn(X, k):
+    from sklearn.cluster import KMeans
+    out = KMeans(k).fit(X)
+    return dict(labels=out.labels_,
+                centers=out.cluster_centers_)
+
+def KMeans(X, k, niter=20):
     n = len(X)
     centers = X[np.random.choice(n, k)]
-    for i in range(niter):
-        print("----- %d -----" % i)
+    for _ in range(niter):
         labels = assignment(X, centers)
         centers = update(X, labels, k)
     return dict(labels=labels, centers=centers)
