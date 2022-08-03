@@ -35,20 +35,19 @@ def gmm(X, k, niter=20):
     >>> dist3 = multivariate_normal([5, 60], [[10, 0], [0, 15]]).rvs(size=n)
     >>> X = np.concatenate([dist1, dist2, dist3])
     """
-    mu, sigma = init_random_dist(X, k)
+    mu, sigma, pi = init_states(X, k)
     w = [1 / k] * k
-    R = np.zeros((len(X), k))
-    ll = []
+    ll, ll_old = np.log(0), np.log(0)
     # EM iterations
-    for i in range(niter):
+    while ll - ll_old) > 3
         # E-step
-        R = estimate_R(R, X, w, mu, sigma)
+        R = calculate_R(X, pi, mu, sigma)
         # M-step
-        w     = update_w(R)
+        pi    = update_pi(R)
         mu    = update_mu(R, X)
         sigma = update_sigma(R, X, mu)
         # likelihood
-        lod = get_ll(X, w, mu, sigma)
+        lod = get_ll(X, pi, mu, sigma)
         ll += [lod]
     # return
     return dict(labels=R.argmax(axis=1),
@@ -56,31 +55,36 @@ def gmm(X, k, niter=20):
                 ll=ll)
 
 def pdf_mvn(x, mu, sigma):
-    """_summary_
+    """ Compute the probability P(x | MVN(mu, sigma))
 
     Parameters
     ----------
-        x (_type_): _description_
-        mu (_type_): _description_
-        sigma (_type_): _description_
+    x : array_like
+        the inspected data.
+        A NumPy array in a shape of (p,), where p is the number of data dimension.
+    mu : array_like
+        the mean of the mvn distribution.
+        A NumPy array in a shape of (p,), where p is the number of data dimension.
+    sigma : array_like
+        the standard deviation of the mvn distribution.
+        A NumPy array in a shape of (p, p), where p is the number of data dimension.
 
     Returns
     -------
-        _type_: _description_
+    a floating number
+        P(x | MVN(mu, sigma))
 
     Examples
     ---------
-    >>> from scipy.stats import multivariate_normal
-    >>> x = [9, 10]
-    >>> mu = [10, 20]
-    >>> sigma = [[10, 5],
-                 [5, 25]]
-    >>> multivariate_normal.pdf(x, mean=mu, cov=sigma)
-    >>> pdf_mvn(x, mu, sigma)
+    x  = [10, 20]
+    mu = [10, 20]
+    sigma = [[10, 5],
+             [5, 25]]
+    pdf_mvn(x, mu, sigma) # should return 0.010610
     """
     # numerator
-    e1 = np.matmul((x - mu).T, np.linalg.inv(sigma))
-    e2 = np.matmul(e1, (x - mu))
+    e1  = np.matmul((x - mu).T, np.linalg.inv(sigma))
+    e2  = np.matmul(e1, (x - mu))
     num = np.exp(-0.5 * e2)
     # denominator
     den = (np.linalg.det(sigma) * (2 * np.pi) ** len(x)) ** (1 / 2)
@@ -88,7 +92,8 @@ def pdf_mvn(x, mu, sigma):
     p = num / den
     return p
 
-def init_random_dist(X, k):
+
+def init_states(X, k):
     """_summary_
 
     Parameters
@@ -113,34 +118,43 @@ def init_random_dist(X, k):
     return mu, sigma
 
 # update
-def estimate_R(R, X, w, mu, sigma):
-    """_summary_
+def calculate_R(X, pi, mu, sigma):
+    """Calculate posterior probability, P(xi|cj)
 
     Parameters
     ----------
-    R : _type_
-        _description_
-    X : _type_
-        _description_
-    mu : _type_
-        _description_
-    sigma : _type_
-        _description_
+    X : array_like
+        A NumPy array with a shape of (n, p),
+        where n is the number of observations,
+        and p is the data dimension.
+    pi : array_like
+        A NumPy array with a shape of (k,).
+        Prior, P(A).
+    mu : array_like
+        A Numpy array with a shape of (k, p)
+        The mean of the inspected MVN distribution
+    sigma : array_like
+        A Numpy array with a shape of (k, p, p)
+        The covariance of the inspected MVN distribution
 
     Returns
     -------
-    _type_
-        _description_
+    array_like, a NumPy array with a shape of (n, k),
+    where n is the number of observations,
+    and k is the number of clusters.
     """
-    n, k = R.shape
+    # create an empty R matrix
+    n, k = len(X), len(mu)
+    R = np.zeros((n, k))
+    # numerator
     for i in range(n):
         for j in range(k):
-            R[i, j] = w[j] * pdf_mvn(X[i], mu[j], sigma[j])
-    # to make it summed to one
+            R[i, j] = pdf_mvn(X[i], mu[j], sigma[j]) * pi[j]
+    # denominator
     R /= np.sum(R, axis=1)[:, None]
     return R
 
-def update_w(R):
+def update_pi(R):
     return R.mean(axis=0)
 
 def update_mu(R, X):
@@ -170,6 +184,28 @@ def get_ll(X, w, mu, sigma):
             mat_ll[i, j] = w[j] * pdf_mvn(X[i], mu[j], sigma[j])
     ll = np.log(np.sum(mat_ll, axis=1)).sum()
     return ll
+
+
+# plotly
+# colors     = ["rgb(%d, %d, %d)" % tuple(color.tolist()) for color in centers]
+# dfs        = df.iloc[::100]
+# labels_sub = labels[::100]
+# ls_points  = []
+# for i in range(3):
+#     ls_points += [go.Scatter3d(x=dfs.loc[labels_sub==i, "red"],
+#                                y=dfs.loc[labels_sub==i, "green"],
+#                                z=dfs.loc[labels_sub==i, "blue"],
+#                                mode='markers', name='cluster_%d' % (i + 1),
+#                                marker=dict(color=colors[i], size=5,
+#                                            symbol='circle', opacity=0.7))]
+# # layout
+# layout = go.Layout(scene=dict(xaxis=dict(title="red"),
+#                               yaxis=dict(title="green"),
+#                               zaxis=dict(title="blue")),
+#                    margin=dict(l=100, r=200, b=0, t=0))
+# # show
+# fig = go.Figure(data=ls_points, layout=layout)
+# fig.show()
 
 # references:
 # https://www.cs.cmu.edu/~epxing/Class/10715/lectures/EM.pdf
