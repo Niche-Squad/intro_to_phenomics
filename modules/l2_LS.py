@@ -36,7 +36,8 @@ def solve_OLS(X, y):
     XtX = np.matmul(Xt, X)
     XtX_i = np.linalg.inv(XtX)
     XtX_i_Xt = np.matmul(XtX_i, Xt)
-    return np.matmul(XtX_i_Xt, y)
+    beta = np.matmul(XtX_i_Xt, y)
+    return beta
 
 def make_H(beta):
     return np.concatenate((beta[:, 0], [1]), axis=0).reshape(3, 3)
@@ -53,3 +54,18 @@ def transform_P(P, H):
     return Pt[:] / Pt[2]
 
 
+# # P_hat * P.T * inv(P * P.T) = H
+# x = [10, 30, 30, 10]
+# y = [10, 10, 20, 20]
+# i = [1] * 4
+# P = np.array([x, y, i])
+# # define P_hat
+# x = [15, 25, 25, 10]
+# y = [10, 15, 30, 30]
+# P_hat = np.array([x, y, i])
+
+# a = np.matmul(P_hat, P.T)
+# b = np.matmul(P, P.T)
+# bi = np.linalg.inv(b)
+# h = np.matmul(a, bi)
+# np.matmul(h, P)
