@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 def make_X(P_src, P_dst):
     _, n = P_src.shape
@@ -52,9 +53,6 @@ def find_H(P_src, P_dst):
 def transform_P(P, H):
     Pt = np.matmul(H, P)
     return Pt[:] / Pt[2]
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 def plot_shape(P, label=""):
     """ visualize a closed shape defined by a list 2D points
