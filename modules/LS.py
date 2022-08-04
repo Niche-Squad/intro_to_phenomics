@@ -102,19 +102,3 @@ def move_shape_v2(P, tx, ty, angle=0):
                   [             0,               0,  1]])
     return np.matmul(t, P)
 
-
-# # P_hat * P.T * inv(P * P.T) = H
-# x = [10, 30, 30, 10]
-# y = [10, 10, 20, 20]
-# i = [1] * 4
-# P = np.array([x, y, i])
-# # define P_hat
-# x = [15, 25, 25, 10]
-# y = [10, 15, 30, 30]
-# P_hat = np.array([x, y, i])
-
-# a = np.matmul(P_hat, P.T)
-# b = np.matmul(P, P.T)
-# bi = np.linalg.inv(b)
-# h = np.matmul(a, bi)
-# np.matmul(h, P)
