@@ -14,6 +14,11 @@ def KMeans(X, k, niter=20):
         centers = update(X, labels, k)
     return dict(labels=labels, centers=centers)
 
+def init_center(X, k):
+    n = len(X)
+    centers = X[np.random.choice(n, k)]
+    return centers
+
 def euclidean_distance(x, y):
     return np.sum((x - y) ** 2) ** .5
 
