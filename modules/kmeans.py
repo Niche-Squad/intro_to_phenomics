@@ -7,8 +7,7 @@ def KMeans_sklearn(X, k):
                 centers=out.cluster_centers_)
 
 def KMeans(X, k, niter=20):
-    n = len(X)
-    centers = X[np.random.choice(n, k)]
+    centers = init_center(X, k)
     for _ in range(niter):
         labels = assignment(X, centers)
         centers = update(X, labels, k)

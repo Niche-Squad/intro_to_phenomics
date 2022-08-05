@@ -6,7 +6,7 @@ def gmm_sklearn(X, k):
     return dict(labels=out.predict(X),
                 centers=out.means_)
 
-def gmm(X, k, niter=20):
+def gmm(X, k):
     """_summary_
 
     Parameters
@@ -15,8 +15,6 @@ def gmm(X, k, niter=20):
         _description_
     k : _type_
         _description_
-    niter : int, optional
-        _description_, by default 100
 
     Returns
     -------
@@ -25,21 +23,23 @@ def gmm(X, k, niter=20):
 
     Examples
     --------
-    >>> k = 3
-    >>> n = 100
-    >>> N = n * k
-    >>> w = [1 / k] * k
-    >>> ll = []
-    >>> dist1 = multivariate_normal([10, 20], [[10, 5], [5, 25]]).rvs(size=n)
-    >>> dist2 = multivariate_normal([50, 10], [[3, 1], [1, 5]]).rvs(size=n)
-    >>> dist3 = multivariate_normal([5, 60], [[10, 0], [0, 15]]).rvs(size=n)
-    >>> X = np.concatenate([dist1, dist2, dist3])
+    import numpy as np
+    k = 3
+    n = 100
+    dist1 = np.random.multivariate_normal([10, 20], [[10, 5], [5, 25]], n)
+    dist2 = np.random.multivariate_normal([50, 10], [[3, 1], [1, 5]], n)
+    dist3 = np.random.multivariate_normal([5, 60], [[10, 0], [0, 15]], n)
+    X = np.concatenate([dist1, dist2, dist3])
+    out = gmm(X, k)
     """
+    # init
     mu, sigma, pi = init_states(X, k)
-    w = [1 / k] * k
-    ll, ll_old = np.log(0), np.log(0)
+    ll = np.log(0)
     # EM iterations
-    while ll - ll_old) > 3
+    while True:
+        print(ll)
+        # update ll
+        ll_prev = ll
         # E-step
         R = calculate_R(X, pi, mu, sigma)
         # M-step
@@ -47,12 +47,13 @@ def gmm(X, k, niter=20):
         mu    = update_mu(R, X)
         sigma = update_sigma(R, X, mu)
         # likelihood
-        lod = get_ll(X, pi, mu, sigma)
-        ll += [lod]
+        ll = get_ll(X, pi, mu, sigma)
+        # check improvement
+        if ll - ll_prev < 3:
+            break
     # return
     return dict(labels=R.argmax(axis=1),
-                mu=mu, sigma=sigma,
-                ll=ll)
+                mu=mu, sigma=sigma, ll=ll)
 
 def pdf_mvn(x, mu, sigma):
     """ Compute the probability P(x | MVN(mu, sigma))
@@ -92,7 +93,6 @@ def pdf_mvn(x, mu, sigma):
     p = num / den
     return p
 
-
 def init_states(X, k):
     """_summary_
 
@@ -111,11 +111,12 @@ def init_states(X, k):
 
     n = len(X)
     # randomly assign a data point to a cluster
-    clusters = np.random.random(n) // (1 / k)
-    Xc    = [X[clusters == i] for i in range(k)]
+    labels = np.random.random(n) // (1 / k)
+    pi     = [np.mean(labels == i) for i in range(k)]
+    Xc    = [X[labels == i] for i in range(k)]
     mu    = [np.mean(xc, axis=0) for xc in Xc]
     sigma = [np.cov(xc.T) for xc in Xc]
-    return mu, sigma
+    return mu, sigma, pi
 
 # update
 def calculate_R(X, pi, mu, sigma):
@@ -209,5 +210,4 @@ def get_ll(X, w, mu, sigma):
 
 # references:
 # https://www.cs.cmu.edu/~epxing/Class/10715/lectures/EM.pdf
-# https://www.youtube.com/watch?v=qMTuMa86NzU
 # https://en.wikipedia.org/wiki/Multivariate_normal_distribution
